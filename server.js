@@ -8,6 +8,8 @@ const {
   createUser,
   editUser,
   getUsersList,
+  deleteUser,
+  getRealmRoles,
 } = require("./keycloakService");
 const { authenticateRole } = require("./rbacMiddleware");
 
@@ -119,6 +121,32 @@ app.get("/users/list", async (req, res) => {
 
     const usersList = await getUsersList(realm, token, isSuperAdmin === "true");
     res.status(200).json(usersList);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 📌 **Super Admin & Org Admin - Delete a User**
+app.delete("/users/delete", async (req, res) => {
+  try {
+    const { realm, username } = req.body;
+    const token = req.headers.authorization?.split(" ")[1];
+
+    const result = await deleteUser(realm, username, token);
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 📌 **Super Admin & Org Admin - List Realm Roles (Excluding Defaults)**
+app.get("/roles/list", async (req, res) => {
+  try {
+    const { realm } = req.query;
+    const token = req.headers.authorization?.split(" ")[1];
+
+    const result = await getRealmRoles(realm, token);
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

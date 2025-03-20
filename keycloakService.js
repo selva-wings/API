@@ -50,107 +50,7 @@ async function loginUser(realm, username, password) {
   }
 }
 
-// // 📌 **Create a New Organization (Realm)**
-// async function createOrganization(
-//   realm,
-//   adminUsername,
-//   adminEmail,
-//   adminPassword,
-//   superAdminToken
-// ) {
-//   try {
-//     // **Step 1: Create Realm**
-//     await axios.post(
-//       `${config.KEYCLOAK_URL}/admin/realms`,
-//       { id: realm, realm, enabled: true },
-//       {
-//         headers: { Authorization: `Bearer ${superAdminToken}` },
-//       }
-//     );
-
-//     console.log(`✅ Realm '${realm}' created successfully.`);
-
-//     // **Step 2: Configure Realm Settings (SSO & Token Lifespan)**
-//     await axios.put(
-//       `${config.KEYCLOAK_URL}/admin/realms/${realm}`,
-//       {
-//         ssoSessionIdleTimeout: 86400, // 1 day in seconds
-//         accessTokenLifespan: 86400, // 1 day in seconds
-//       },
-//       {
-//         headers: { Authorization: `Bearer ${superAdminToken}` },
-//       }
-//     );
-
-//     console.log(`✅ Updated SSO and Access Token Lifespan settings.`);
-
-//     // **Step 3: Create Client in Realm**
-//     await axios.post(
-//       `${config.KEYCLOAK_URL}/admin/realms/${realm}/clients`,
-//       {
-//         clientId: `${realm}-api`,
-//         enabled: true,
-//         directAccessGrantsEnabled: true,
-//         publicClient: false,
-//         secret: config.CLIENT_SECRET,
-//       },
-//       {
-//         headers: { Authorization: `Bearer ${superAdminToken}` },
-//       }
-//     );
-
-//     console.log(`✅ Client '${realm}-api' created.`);
-
-//     // **Step 4: Create Org-Admin Role**
-//     await axios.post(
-//       `${config.KEYCLOAK_URL}/admin/realms/${realm}/roles`,
-//       { name: "org-admin" },
-//       {
-//         headers: { Authorization: `Bearer ${superAdminToken}` },
-//       }
-//     );
-
-//     console.log(`✅ Role 'org-admin' created.`);
-
-//     // **Step 5: Create Organization Admin with Email Verification**
-//     const userResponse = await axios.post(
-//       `${config.KEYCLOAK_URL}/admin/realms/${realm}/users`,
-//       {
-//         username: adminUsername,
-//         email: adminEmail,
-//         enabled: true,
-//         emailVerified: true,
-//         firstName: adminUsername,
-//         lastName: adminUsername,
-//         credentials: [
-//           { type: "password", value: adminPassword, temporary: false },
-//         ],
-//       },
-//       {
-//         headers: { Authorization: `Bearer ${superAdminToken}` },
-//       }
-//     );
-
-//     console.log(
-//       `✅ Organization Admin '${adminUsername}' created with email verification enabled.`
-//     );
-//     return { message: `✅ Organization '${realm}' created successfully.` };
-//   } catch (error) {
-//     if (error.response?.status === 409) {
-//       console.error(` Organization '${realm}' already exists.`);
-//       return { message: ` Organization '${realm}' already exists.` };
-//     }
-
-//     console.error(
-//       "❌ Error creating organization:",
-//       error.response?.data || error
-//     );
-//     throw new Error("Failed to create organization.");
-//   }
-// }
-
 // 📌 **Create a New Organization (Realm)**
-
 async function createOrganization(
   realm,
   adminUsername,
@@ -163,8 +63,11 @@ async function createOrganization(
     await axios.post(
       `${config.KEYCLOAK_URL}/admin/realms`,
       { id: realm, realm, enabled: true },
-      { headers: { Authorization: `Bearer ${superAdminToken}` } }
+      {
+        headers: { Authorization: `Bearer ${superAdminToken}` },
+      }
     );
+
     console.log(`✅ Realm '${realm}' created successfully.`);
 
     // **Step 2: Configure Realm Settings (SSO & Token Lifespan)**
@@ -174,8 +77,11 @@ async function createOrganization(
         ssoSessionIdleTimeout: 86400, // 1 day in seconds
         accessTokenLifespan: 86400, // 1 day in seconds
       },
-      { headers: { Authorization: `Bearer ${superAdminToken}` } }
+      {
+        headers: { Authorization: `Bearer ${superAdminToken}` },
+      }
     );
+
     console.log(`✅ Updated SSO and Access Token Lifespan settings.`);
 
     // **Step 3: Create Client in Realm**
@@ -188,62 +94,25 @@ async function createOrganization(
         publicClient: false,
         secret: config.CLIENT_SECRET,
       },
-      { headers: { Authorization: `Bearer ${superAdminToken}` } }
+      {
+        headers: { Authorization: `Bearer ${superAdminToken}` },
+      }
     );
+
     console.log(`✅ Client '${realm}-api' created.`);
 
     // **Step 4: Create Org-Admin Role**
     await axios.post(
       `${config.KEYCLOAK_URL}/admin/realms/${realm}/roles`,
       { name: "org-admin" },
-      { headers: { Authorization: `Bearer ${superAdminToken}` } }
+      {
+        headers: { Authorization: `Bearer ${superAdminToken}` },
+      }
     );
+
     console.log(`✅ Role 'org-admin' created.`);
 
-    // **Step 5: Fetch Org-Admin Role**
-    const orgAdminRoleResponse = await axios.get(
-      `${config.KEYCLOAK_URL}/admin/realms/${realm}/roles/org-admin`,
-      { headers: { Authorization: `Bearer ${superAdminToken}` } }
-    );
-
-    const orgAdminRole = orgAdminRoleResponse.data;
-
-    if (!orgAdminRole || !orgAdminRole.id) {
-      throw new Error("❌ 'org-admin' role not found.");
-    }
-
-    // **Step 6: Fetch Available Roles to Assign**
-    const availableRolesResponse = await axios.get(
-      `${config.KEYCLOAK_URL}/admin/realms/${realm}/roles`,
-      { headers: { Authorization: `Bearer ${superAdminToken}` } }
-    );
-
-    const availableRoles = availableRolesResponse.data;
-    console.log("availableRoles:", availableRoles);
-
-    const roleNames = [
-      "delete-account",
-      "manage-account",
-      "manage-account-links",
-      "manage-consent",
-      "view-applications",
-      "view-consent",
-      "view-groups",
-      "view-profile",
-      "read-token",
-      "create-client",
-    ];
-
-    for (const roleName of roleNames) {
-      await axios.post(
-        `${config.KEYCLOAK_URL}/admin/realms/${realm}/roles`,
-        { name: roleName },
-        { headers: { Authorization: `Bearer ${superAdminToken}` } }
-      );
-      console.log(`✅ Role '${roleName}' created.`);
-    }
-
-    // **Step 8: Create Organization Admin with Email Verification**
+    // **Step 5: Create Organization Admin with Email Verification**
     const userResponse = await axios.post(
       `${config.KEYCLOAK_URL}/admin/realms/${realm}/users`,
       {
@@ -257,23 +126,24 @@ async function createOrganization(
           { type: "password", value: adminPassword, temporary: false },
         ],
       },
-      { headers: { Authorization: `Bearer ${superAdminToken}` } }
+      {
+        headers: { Authorization: `Bearer ${superAdminToken}` },
+      }
     );
 
     console.log(
       `✅ Organization Admin '${adminUsername}' created with email verification enabled.`
     );
-
     return { message: `✅ Organization '${realm}' created successfully.` };
   } catch (error) {
     if (error.response?.status === 409) {
-      console.error(`⚠️ Organization '${realm}' already exists.`);
-      return { message: `⚠️ Organization '${realm}' already exists.` };
+      console.error(` Organization '${realm}' already exists.`);
+      return { message: ` Organization '${realm}' already exists.` };
     }
 
     console.error(
       "❌ Error creating organization:",
-      error.response?.data || error.message || error
+      error.response?.data || error
     );
     throw new Error("Failed to create organization.");
   }
@@ -457,6 +327,69 @@ async function getUsersList(realm, adminToken, isSuperAdmin) {
   }
 }
 
+// 📌 **Delete User by Username (Super Admin & Org Admin)**
+async function deleteUser(realm, username, adminToken) {
+  try {
+    // Step 1: Get User ID using Username
+    const usersResponse = await axios.get(
+      `${config.KEYCLOAK_URL}/admin/realms/${realm}/users?username=${username}`,
+      { headers: { Authorization: `Bearer ${adminToken}` } }
+    );
+
+    if (usersResponse.data.length === 0) {
+      throw new Error(`User '${username}' not found in realm '${realm}'.`);
+    }
+
+    const userId = usersResponse.data[0].id; // Extract User ID
+
+    // Step 2: Delete User by User ID
+    await axios.delete(
+      `${config.KEYCLOAK_URL}/admin/realms/${realm}/users/${userId}`,
+      {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }
+    );
+
+    console.log(
+      `✅ User '${username}' deleted successfully from realm '${realm}'.`
+    );
+    return { message: `✅ User '${username}' deleted successfully.` };
+  } catch (error) {
+    console.error("❌ Error deleting user:", error.response?.data || error);
+    throw new Error("Failed to delete user.");
+  }
+}
+
+// 📌 **List Realm Roles (Excluding Default Roles)**
+async function getRealmRoles(realm, adminToken) {
+  try {
+    // Step 1: Fetch All Realm Roles
+    const response = await axios.get(
+      `${config.KEYCLOAK_URL}/admin/realms/${realm}/roles`,
+      { headers: { Authorization: `Bearer ${adminToken}` } }
+    );
+
+    let roles = response.data.map((role) => role.name);
+
+    // Step 2: Filter Out Default Roles
+    const excludedRoles = [
+      "offline_access",
+      "uma_authorization",
+      `default-roles-${realm}`,
+    ];
+    roles = roles.filter((role) => !excludedRoles.includes(role));
+
+    console.log(`✅ Realm Roles for '${realm}':`, roles);
+    return { roles };
+  } catch (error) {
+    console.error(
+      "❌ Error fetching realm roles:",
+      error.response?.data || error
+    );
+    throw new Error("Failed to fetch realm roles.");
+  }
+}
+
 module.exports = {
   getSuperAdminToken,
   loginUser,
@@ -464,5 +397,7 @@ module.exports = {
   deleteOrganization,
   createUser,
   editUser,
-  getUsersList, // ✅ New function added
+  getUsersList,
+  deleteUser,
+  getRealmRoles, // ✅ New function added
 };
