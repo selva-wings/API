@@ -10,6 +10,8 @@ const {
   getUsersList,
   deleteUser,
   getRealmRoles,
+  bulkCreateUsers,
+  assignUserRole,
 } = require("./keycloakService");
 const { authenticateRole } = require("./rbacMiddleware");
 
@@ -146,6 +148,38 @@ app.get("/roles/list", async (req, res) => {
     const token = req.headers.authorization?.split(" ")[1];
 
     const result = await getRealmRoles(realm, token);
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 📌 **Bulk Upload Users (Super Admin & Org Admin)**
+app.post("/users/bulk-upload", async (req, res) => {
+  try {
+    const { realm, users } = req.body; // `users` is an array
+    const token = req.headers.authorization?.split(" ")[1];
+
+    if (!Array.isArray(users) || users.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "Invalid users list. Provide an array of users." });
+    }
+
+    const result = await bulkCreateUsers(realm, users, token);
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 📌 **Super Admin & Org Admin - Assign Role to User**
+app.post("/users/assign-role", async (req, res) => {
+  try {
+    const { realm, username, roleName } = req.body;
+    const token = req.headers.authorization?.split(" ")[1];
+
+    const result = await assignUserRole(realm, username, roleName, token);
     res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
