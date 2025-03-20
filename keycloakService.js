@@ -390,6 +390,98 @@ async function getRealmRoles(realm, adminToken) {
   }
 }
 
+// 📌 **Bulk Create Users (Super Admin & Org Admin)**
+async function bulkCreateUsers(realm, users, adminToken) {
+  try {
+    const results = [];
+
+    // Loop through each user in the array
+    for (const user of users) {
+      const userPayload = {
+        username: user.username,
+        email: user.email,
+        enabled: true,
+        emailVerified: true,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        credentials: [
+          { type: "password", value: user.password, temporary: false },
+        ],
+      };
+
+      try {
+        // Create User in Keycloak
+        await axios.post(
+          `${config.KEYCLOAK_URL}/admin/realms/${realm}/users`,
+          userPayload,
+          { headers: { Authorization: `Bearer ${adminToken}` } }
+        );
+
+        results.push({
+          username: user.username,
+          status: "✅ Created Successfully",
+        });
+      } catch (error) {
+        results.push({
+          username: user.username,
+          status: "❌ Failed",
+          error: error.response?.data || error.message,
+        });
+      }
+    }
+
+    console.log("✅ Bulk User Creation Completed");
+    return { message: "Bulk Upload Completed", results };
+  } catch (error) {
+    console.error("❌ Bulk Upload Error:", error.response?.data || error);
+    throw new Error("Failed to upload users in bulk.");
+  }
+}
+
+
+// 📌 **Assign Role to a User (Super Admin & Org Admin)**
+async function assignUserRole(realm, username, roleName, adminToken) {
+  try {
+    // Step 1: Get User ID using Username
+    const usersResponse = await axios.get(
+      `${config.KEYCLOAK_URL}/admin/realms/${realm}/users?username=${username}`,
+      { headers: { Authorization: `Bearer ${adminToken}` } }
+    );
+ 
+    if (usersResponse.data.length === 0) {
+      throw new Error(`User '${username}' not found in realm '${realm}'.`);
+    }
+ 
+    const userId = usersResponse.data[0].id; // Extract User ID
+ 
+    // Step 2: Get Role ID by Role Name
+    const rolesResponse = await axios.get(
+      `${config.KEYCLOAK_URL}/admin/realms/${realm}/roles`,
+      { headers: { Authorization: `Bearer ${adminToken}` } }
+    );
+ 
+    const role = rolesResponse.data.find((r) => r.name === roleName);
+    if (!role) {
+      throw new Error(`Role '${roleName}' not found in realm '${realm}'.`);
+    }
+ 
+    // Step 3: Assign Role to User
+    await axios.post(
+      `${config.KEYCLOAK_URL}/admin/realms/${realm}/users/${userId}/role-mappings/realm`,
+      [{ id: role.id, name: roleName }],
+      {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }
+    );
+ 
+    console.log(`✅ Role '${roleName}' assigned to user '${username}' in realm '${realm}'.`);
+    return { message: `✅ Role '${roleName}' assigned to '${username}' successfully.` };
+  } catch (error) {
+    console.error("❌ Error assigning role:", error.response?.data || error);
+    throw new Error("Failed to assign role.");
+  }
+}
+
 module.exports = {
   getSuperAdminToken,
   loginUser,
@@ -399,5 +491,7 @@ module.exports = {
   editUser,
   getUsersList,
   deleteUser,
-  getRealmRoles, // ✅ New function added
+  getRealmRoles,
+  bulkCreateUsers, // ✅ New Function Added
+  assignUserRole,
 };
